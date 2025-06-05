@@ -77,7 +77,7 @@ const UserProfile = () => {
     address: "",
     city: "",
     state: "",
-    postalCode: "",
+    pincode: "",
     country: "India",
     phone: "",
     default: false,
@@ -110,73 +110,30 @@ const UserProfile = () => {
 
     setIsLoadingAddresses(true);
     try {
-      console.log("Attempting to fetch user document with ID:", user.$id);
-
-      // Get user document from database using the user's Auth ID
       const userDoc = await db.users.get(user.$id);
       setUserDbData(userDoc);
 
-      // Parse addresses - note the field name is "Address" not "addresses"
-      if (userDoc.address) {
+      if (userDoc.address && Array.isArray(userDoc.address)) {
         setAddressData(userDoc.address);
       } else {
         setAddressData([]);
       }
 
       if (userDoc.orders) {
-        try {
-          console.log("Parsing orders from user document:", userDoc.orders);
-          setOrders(userDoc.orders);
-        } catch (error) {
-          console.error("Error parsing orders:", error);
-          // Handle orders parsing error if needed
-        }
+        setOrders(userDoc.orders);
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
 
-      // Only try to create document if we're sure the user is authenticated
-      if (error.code === 404 && user?.$id && user?.email) {
-        try {
-          console.log(
-            "Document not found, creating new document with ID:",
-            user.$id
-          );
-
-          // Create document with proper field name
-          const newUserDoc = await db.users.create(
-            {
-              name: user.name || "",
-              email: user.email || "",
-              Address: [], // Use "Address" field name to match existing schema
-            },
-            [
-              `read("user:${user.$id}")`,
-              `update("user:${user.$id}")`,
-              `delete("user:${user.$id}")`,
-            ],
-            user.$id
-          );
-
-          console.log("Successfully created user document:", newUserDoc);
-          setAddressData([]);
-          setUserDbData({
-            name: user.name || "",
-            email: user.email || "",
-            Address: [],
-          });
-          toast.success("User profile initialized successfully");
-        } catch (createError) {
-          console.error("Error creating user document:", createError);
-          toast.error("Failed to initialize user data");
-        }
-      } else if (error.code !== 404) {
-        console.error("Database error:", error);
-        if (user?.$id) {
-          toast.error("Failed to load user data");
-        }
+      if (error.code === 404) {
+        // User document doesn't exist yet - your function will create it
+        console.log(
+          "User document not found - will be created by function on next auth event"
+        );
+        setAddressData([]);
+      } else {
+        toast.error("Failed to load user data");
       }
-      setAddressData([]);
     } finally {
       setIsLoadingAddresses(false);
     }
@@ -198,18 +155,26 @@ const UserProfile = () => {
     if (!user?.$id) return false;
 
     try {
-      // Convert address objects back to the string format your database expects
-      const addressStrings = newAddresses.map(
-        (addr) =>
-          `${addr.name}\n\n${addr.address}\n\n${addr.city}, ${addr.state} ${addr.postalCode}\n\n${addr.country}\n\nPhone: ${addr.phone}`
-      );
+      // Only remove 'id' field before saving (keep 'default' since it's now in your schema)
+      const cleanAddresses = newAddresses.map((addr) => {
+        const { id, ...cleanAddr } = addr; // Only destructure 'id', keep 'default'
+        return cleanAddr;
+      });
 
       await db.users.update(user.$id, {
-        Address: addressStrings, // Use "Address" field name
+        address: cleanAddresses,
       });
       return true;
     } catch (error) {
       console.error("Error updating addresses:", error);
+
+      if (error.code === 404) {
+        toast.error(
+          "User profile not found. Please try logging out and back in."
+        );
+        return false;
+      }
+
       toast.error("Failed to update addresses");
       return false;
     }
@@ -366,7 +331,7 @@ const UserProfile = () => {
       !addressForm.name ||
       !addressForm.address ||
       !addressForm.city ||
-      !addressForm.postalCode ||
+      !addressForm.pincode ||
       !addressForm.phone
     ) {
       toast.error("Please fill in all required fields");
@@ -401,7 +366,7 @@ const UserProfile = () => {
         address: "",
         city: "",
         state: "",
-        postalCode: "",
+        pincode: "",
         country: "India",
         phone: "",
         default: false,
@@ -419,7 +384,7 @@ const UserProfile = () => {
       address: "",
       city: "",
       state: "",
-      postalCode: "",
+      pincode: "",
       country: "India",
       phone: "",
       default: false,
@@ -1176,8 +1141,8 @@ const UserProfile = () => {
                             </label>
                             <input
                               type="text"
-                              name="postalCode"
-                              value={addressForm.postalCode}
+                              name="pincode"
+                              value={addressForm.pincode}
                               onChange={handleAddressInputChange}
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                               required
@@ -1279,7 +1244,7 @@ const UserProfile = () => {
                               <p>
                                 {address.city}
                                 {address.state && `, ${address.state}`}{" "}
-                                {address.postalCode}
+                                {address.pincode}
                               </p>
                               <p>{address.country}</p>
                               <p>Phone: {address.phone}</p>
