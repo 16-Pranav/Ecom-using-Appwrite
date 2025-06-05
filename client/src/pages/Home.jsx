@@ -3,7 +3,7 @@ import Navbar from "../components/Navbar";
 import Flyer from "../components/Flyer";
 import Deals from "../components/Deals";
 import Footer from "../components/Footer";
-import ShopRedirect from "../components/shopRedirect";
+import ShopRedirect from "../components/ShopRedirect";
 import CategoryList from "../components/CategoryList";
 
 
