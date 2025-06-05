@@ -3,6 +3,11 @@ import { Link } from "react-router-dom";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 import { CartContext } from "../context/CartContext";
+import {
+  getEffectivePrice,
+  hasDiscount,
+  getOriginalPrice,
+} from "../utils/priceUtils";
 
 const CartPage = () => {
   const {
@@ -97,13 +102,23 @@ const CartPage = () => {
                       >
                         +
                       </button>
-                    </div>
+                    </div>{" "}
                     <div className="w-24 text-right">
                       <p className="font-semibold">
-                        Rs. {(item.price * item.quantity).toFixed(2)}
+                        Rs.{" "}
+                        {(getEffectivePrice(item) * item.quantity).toFixed(2)}
                       </p>
                       <p className="text-sm text-gray-600">
-                        Rs. {item.price.toFixed(2)} each
+                        {hasDiscount(item) ? (
+                          <>
+                            Rs. {getEffectivePrice(item).toFixed(2)} each{" "}
+                            <span className="line-through text-red-500 text-xs">
+                              Rs. {getOriginalPrice(item).toFixed(2)}
+                            </span>
+                          </>
+                        ) : (
+                          `Rs. ${getEffectivePrice(item).toFixed(2)} each`
+                        )}
                       </p>
                     </div>
                   </div>

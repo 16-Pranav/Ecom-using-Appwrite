@@ -6,7 +6,8 @@ import { CartContext } from "../context/CartContext";
 
 const Deals = () => {
   // Context Management:
-  const { increaseQuantity, decreaseQuantity, getItemQuantity } = useContext(CartContext);
+  const { increaseQuantity, decreaseQuantity, getItemQuantity } =
+    useContext(CartContext);
 
   // State Management:
   const [products, setProducts] = useState([]);
@@ -29,18 +30,15 @@ const Deals = () => {
   };
 
   // Get the current quantity of a product
-  const currentQuantity = (productId) =>{
+  const currentQuantity = (productId) => {
     return getItemQuantity(productId);
-  }
-
-  // // decrease increase functions:
+  };
+  // decrease increase functions:
   const handleIncrease = (product) => {
-    console.log("Increasing quantity for:", product.name, product.$id);
     increaseQuantity(product);
   };
 
   const handleDecrease = (productId) => {
-    console.log("Decreasing quantity for product ID:", productId);
     decreaseQuantity(productId);
   };
 
@@ -52,7 +50,6 @@ const Deals = () => {
         </h1>
         <div className="mt-10 flex flex-wrap justify-center gap-4">
           {products.map((product) => (
-            
             // <Link
             //   key={index}
             //   to={`/AboutProduct/${product.id}`}

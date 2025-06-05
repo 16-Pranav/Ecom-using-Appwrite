@@ -122,14 +122,10 @@ const UserProfile = () => {
       if (userDoc.orders) {
         setOrders(userDoc.orders);
       }
-    } catch (error) {
-      console.error("Error fetching user data:", error);
+    } catch (error) {      console.error("Error fetching user data:", error);
 
       if (error.code === 404) {
         // User document doesn't exist yet - your function will create it
-        console.log(
-          "User document not found - will be created by function on next auth event"
-        );
         setAddressData([]);
       } else {
         toast.error("Failed to load user data");

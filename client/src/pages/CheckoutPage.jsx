@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast"; // Add this import
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { FaCheck, FaLock, FaCreditCard, FaPaypal } from "react-icons/fa";
@@ -7,6 +8,11 @@ import { CartContext } from "../context/CartContext";
 import { assets } from "../assets/assets";
 import db from "../config/databases";
 import { AuthContext } from "../context/AuthContext";
+import {
+  getEffectivePrice,
+  hasDiscount,
+  getOriginalPrice,
+} from "../utils/priceUtils";
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
@@ -29,17 +35,23 @@ const CheckoutPage = () => {
 
   // Get user data from Auth context
   const { user } = useContext(AuthContext);
-
   const initDb = async () => {
     try {
-      // Change the local variable name to avoid conflict with the user from AuthContext
       const userData = await db.users.get(user.$id);
       setUserData(userData);
+
       if (userData.address) {
         setAddressData(userData.address);
+        // Auto-select first address or default address
+        const defaultAddress =
+          userData.address.find((addr) => addr.default) || userData.address[0];
+        if (defaultAddress) {
+          setSelectedAddress(defaultAddress);
+        }
       }
     } catch (error) {
       console.error("Error initializing database:", error);
+      toast.error("Failed to load user data");
     }
   };
 
@@ -82,55 +94,66 @@ const CheckoutPage = () => {
     );
   }
   // Handle payment submission
-  const handlePayment = (e) => {
+  const handlePayment = async (e) => {
     e.preventDefault();
 
-    // Log payment details
-    console.log("Payment Method:", paymentMethod);
-    console.log("Selected Address:", selectedAddress);
-    console.log("Total Amount:", finalTotal.toFixed(2));
-    console.log("Cart Items:", cart);
-    console.log("User Data:", userData);
-
-    // Save order to database
-    const orderData = {
-      user: user.$id,
-      total_items: totalItems,
-      items: cart.map((item) =>
-        JSON.stringify({
-          id: item.$id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          imageUrl: item.imageUrl || item.image,
-        })
-      ), // Array of strings, not JSON.stringify of the whole array
-      amount: finalTotal,
-      payment: paymentMethod,
-      address: JSON.stringify(selectedAddress),
-      status: "Pending",
-      date: new Date().toISOString(),
-    };
-
-    db.orders.create(orderData);
-
-    // Set payment success state
-    setPaymentSuccess(true);
-
-    // Simulate payment processing
-    setTimeout(() => {
-      console.log("Payment processed successfully");
-    }, 1000);
-
-    // Clear cart after successful payment
-    if (clearCart) {
-      clearCart();
+    // Validate required fields
+    if (!selectedAddress) {
+      toast.error("Please select a billing address");
+      return;
     }
 
-    // Redirect to orders page after showing success animation
-    setTimeout(() => {
-      navigate("/profile", { state: { activeTab: "orders" } });
-    }, 2000);
+    if (paymentMethod === "Select") {
+      toast.error("Please select a payment method");
+      return;
+    }
+    try {
+      const orderData = {
+        user: user.$id,
+        total_items: totalItems,
+        items: cart.map((item) =>
+          JSON.stringify({
+            id: item.$id,
+            name: item.name,
+            price: getEffectivePrice(item), // Use effective price for order
+            originalPrice: getOriginalPrice(item), // Store original price for reference
+            quantity: item.quantity,
+            imageUrl: item.imageUrl || item.image,
+          })
+        ),
+        amount: finalTotal,
+        payment: paymentMethod,
+        address: JSON.stringify(selectedAddress),
+        status: "Processing", // Changed from "Pending" to match your order status filters
+        date: new Date().toISOString(),
+      };
+
+      // Await the order creation
+      const createdOrder = await db.orders.create(orderData);
+
+      // Set payment success state only after successful order creation
+      setPaymentSuccess(true);
+
+      // Simulate payment processing
+      setTimeout(() => {
+        // Clear cart after successful payment
+        if (clearCart) {
+          clearCart();
+        }
+
+        // Show success message
+        toast.success("Order placed successfully!");
+
+        // Redirect to orders page after showing success animation
+        navigate("/profile", { state: { activeTab: "orders" } });
+      }, 2000);
+    } catch (error) {
+      console.error("Error creating order:", error);
+      toast.error("Failed to place order. Please try again.");
+
+      // Don't set payment success if order creation failed
+      // setPaymentSuccess(true); // Remove this line
+    }
   };
 
   return (
@@ -432,9 +455,10 @@ const CheckoutPage = () => {
                               Qty: {item.quantity}
                             </p>
                           </div>
-                        </div>
+                        </div>{" "}
                         <p className="font-medium text-sm sm:text-base ml-2 flex-shrink-0">
-                          Rs. {(item.price * item.quantity).toFixed(2)}
+                          Rs.{" "}
+                          {(getEffectivePrice(item) * item.quantity).toFixed(2)}
                         </p>
                       </div>
                     ))}

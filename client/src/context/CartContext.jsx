@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect } from "react";
+import { getEffectivePrice } from "../utils/priceUtils";
 
 export const CartContext = createContext();
 
@@ -29,14 +30,8 @@ export const CartContextProvider = ({ children }) => {
     }
   }, [cart]);
 
-  // Removed unused states like amt, loading for clarity unless you need them
-  // Function to add product to cart or increase its quantity
+  // Removed unused states like amt, loading for clarity unless you need them  // Function to add product to cart or increase its quantity
   const increaseQuantity = (product) => {
-    console.log(
-      "[CartContext] increaseQuantity for product:",
-      product.name,
-      product.$id
-    );
     setCart((currentCart) => {
       const existingItemIndex = currentCart.findIndex(
         (item) => item.$id === product.$id
@@ -49,26 +44,16 @@ export const CartContextProvider = ({ children }) => {
             ? { ...item, quantity: (item.quantity || 0) + 1 }
             : item
         );
-        console.log(
-          "[CartContext] increaseQuantity - updated existing item, newCart:",
-          updatedCart
-        );
         return updatedCart;
       } else {
         // If item doesn't exist, add it to cart with quantity 1
         const newCart = [...currentCart, { ...product, quantity: 1 }];
-        console.log(
-          "[CartContext] increaseQuantity - added new item, newCart:",
-          newCart
-        );
         return newCart;
       }
     });
   };
-
   // Function to decrease product quantity or remove from cart
   const decreaseQuantity = (productId) => {
-    console.log("[CartContext] decreaseQuantity for productId:", productId);
     setCart((currentCart) => {
       const existingItemIndex = currentCart.findIndex(
         (item) => item.$id === productId
@@ -81,10 +66,6 @@ export const CartContextProvider = ({ children }) => {
           const updatedCart = currentCart.filter(
             (item, index) => index !== existingItemIndex
           );
-          console.log(
-            "[CartContext] decreaseQuantity - removed item, newCart:",
-            updatedCart
-          );
           return updatedCart;
         } else {
           // Decrease quantity if it's more than 1
@@ -93,45 +74,26 @@ export const CartContextProvider = ({ children }) => {
               ? { ...item, quantity: item.quantity - 1 }
               : item
           );
-          console.log(
-            "[CartContext] decreaseQuantity - decreased quantity, newCart:",
-            updatedCart
-          );
           return updatedCart;
         }
       }
-      console.log(
-        "[CartContext] decreaseQuantity - item not found or no action, prevCart:",
-        currentCart
-      );
-      return currentCart; // Return previous cart if item not found
+      return currentCart;
     });
-  };
-  // Function to remove item completely from cart
+  }; // Function to remove item completely from cart
   const removeItem = (productId) => {
-    console.log("[CartContext] removeItem for productId:", productId);
     setCart((currentCart) => {
       const updatedCart = currentCart.filter((item) => item.$id !== productId);
-      console.log(
-        "[CartContext] removeItem - item removed, newCart:",
-        updatedCart
-      );
       return updatedCart;
     });
   };
-
   // Function to clear entire cart
   const clearCart = () => {
-    console.log("[CartContext] clearCart - clearing entire cart");
     setCart([]);
   };
-
   // Get quantity of a specific item in cart
   const getItemQuantity = (productId) => {
-    // console.log('[CartContext] getItemQuantity for productId:', productId, 'Current cart:', cart);
     const existingItem = cart.find((item) => item.$id === productId);
     const qty = existingItem ? existingItem.quantity : 0;
-    // console.log('[CartContext] getItemQuantity - found item:', existingItem, 'Returning quantity:', qty);
     return qty;
   }; // Calculate total quantity, amount, and total items when cart changes
   useEffect(() => {
@@ -140,23 +102,13 @@ export const CartContextProvider = ({ children }) => {
 
     for (const item of cart) {
       totalQty += item.quantity;
-      currentTotalAmt += (item.price || 0) * item.quantity;
+      const effectivePrice = getEffectivePrice(item);
+      currentTotalAmt += effectivePrice * item.quantity;
     }
 
     setQuantity(totalQty);
     setTotal(currentTotalAmt);
-    setTotalItems(totalQty); // Total items = sum of all quantities
-
-    console.log(
-      "[CartContext] useEffect - cart changed. Total Qty:",
-      totalQty,
-      "Total Amt:",
-      currentTotalAmt,
-      "Total Items:",
-      totalQty,
-      "Cart:",
-      cart
-    );
+    setTotalItems(totalQty);
   }, [cart]);
   const value = {
     increaseQuantity,

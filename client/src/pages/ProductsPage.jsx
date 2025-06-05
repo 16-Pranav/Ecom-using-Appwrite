@@ -6,6 +6,11 @@ import Footer from "../components/Footer";
 import { CartContext } from "../context/CartContext";
 import db from "../config/databases";
 import {
+  getEffectivePrice,
+  hasDiscount,
+  getOriginalPrice,
+} from "../utils/priceUtils";
+import {
   FaAppleAlt,
   FaCarrot,
   FaBreadSlice,
@@ -26,33 +31,22 @@ const ProductsPage = () => {
   const [sortBy, setSortBy] = useState("default");
 
   // Cart Context to manage cart operations
-  const { increaseQuantity, decreaseQuantity, getItemQuantity } =useContext(CartContext);
+  const { increaseQuantity, decreaseQuantity, getItemQuantity } =
+    useContext(CartContext);
   useEffect(() => {
     initDb();
-  }, []);
-  // Filter products when categories or products change
+  }, []); // Filter products when categories or products change
   useEffect(() => {
     let filtered = [...products]; // Create a copy to avoid mutating original array
 
     if (selectedCategories.length > 0) {
       filtered = filtered.filter((product) => {
-        // Debug logging
-        console.log(
-          "Product category:",
-          product.category,
-          "Selected categories:",
-          selectedCategories
-        );
-
         // Create a mapping between filter categories and database categories
         const categoryMapping = {
           Fruits: "Fruit",
           Vegetables: "Vegetable",
           Dairy: "Dairy",
           Groceries: "Grocery",
-          // Bakery: "Grocery",
-          // Beverages: "Grocery",
-          // Organic: "Grocery",
         };
 
         // Handle case-insensitive comparison and ensure category exists
@@ -70,14 +64,17 @@ const ProductsPage = () => {
 
     // Sort products
     if (sortBy === "price-low") {
-      filtered = filtered.sort((a, b) => a.price - b.price);
+      filtered = filtered.sort(
+        (a, b) => getEffectivePrice(a) - getEffectivePrice(b)
+      );
     } else if (sortBy === "price-high") {
-      filtered = filtered.sort((a, b) => b.price - a.price);
+      filtered = filtered.sort(
+        (a, b) => getEffectivePrice(b) - getEffectivePrice(a)
+      );
     } else if (sortBy === "name") {
       filtered = filtered.sort((a, b) => a.name.localeCompare(b.name));
     }
 
-    console.log("Filtered products:", filtered); // Debug: Check filtered results
     setFilteredProducts(filtered);
   }, [products, selectedCategories, sortBy]);
 
@@ -87,15 +84,9 @@ const ProductsPage = () => {
       setFilteredProducts(products);
     }
   }, [products]);
-
   // Helper function to get item quantity from cart
   const initDb = async () => {
     const response = await db.products.list();
-    console.log("Products from DB:", response.documents); // Debug: Check actual product structure
-    console.log(
-      "Categories in products:",
-      response.documents.map((p) => p.category)
-    ); // Debug: Check category values
     setProducts(response.documents);
   };
 
@@ -120,16 +111,16 @@ const ProductsPage = () => {
     };
     return iconMap[category] || <FaLeaf className="text-green-500" />;
   };
-  // // decrease increase functions:
+
+  // decrease increase functions:
   const handleIncrease = (product) => {
-    console.log("Increasing quantity for:", product.name, product.$id);
     increaseQuantity(product);
   };
 
   const handleDecrease = (productId) => {
-    console.log("Decreasing quantity for product ID:", productId);
     decreaseQuantity(productId);
   };
+
   return (
     <>
       <Navbar />
@@ -299,13 +290,22 @@ const ProductsPage = () => {
 
                     {/* Product Details */}
                     <div className="mt-3 px-4 flex flex-col">
+                      {" "}
                       <h1 className="font-semibold text-xl text-fit whitespace-nowrap overflow-clip">
                         {product.name}
                       </h1>
                       <h2 className="mt-2 text-xl font-semibold">
-                        Rs. {product.price}
+                        {hasDiscount(product) ? (
+                          <>
+                            Rs. {getEffectivePrice(product)}/kg{" "}
+                            <span className="line-through text-red-500">
+                              Rs. {getOriginalPrice(product)}
+                            </span>
+                          </>
+                        ) : (
+                          `Rs. ${getEffectivePrice(product)}`
+                        )}
                       </h2>
-
                       {/* Add to Cart Section */}
                       <div className="flex gap-2 mt-3 transform transition-transform duration-300 ease-in-out hover:scale-105 hover:-translate-y-2">
                         {currentQuantity > 0 ? (
