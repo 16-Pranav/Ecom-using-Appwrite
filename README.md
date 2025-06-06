@@ -14,7 +14,7 @@ E-commerce platform for organic products built with React, TailwindCSS, and Appw
 ## Tech Stack
 
 - **Frontend**: React 18.3.1, TailwindCSS 4.0.1, Vite
-- **Backend**: Appwrite 17.0.2, Firebase 11.7.1
+- **Backend**: Appwrite 17.0.2
 - **State Management**: React Context API
 - **Routing**: React Router 7.1.4
 - **UI Components**: React Icons, React Hot Toast
@@ -48,7 +48,6 @@ E-commerce platform for organic products built with React, TailwindCSS, and Appw
 |------|---------|---------------|
 | **Visual Studio Code** | Primary code editor | [code.visualstudio.com](https://code.visualstudio.com/) |
 | **Google Chrome** | Primary testing browser | [chrome.google.com](https://www.google.com/chrome/) |
-| **Postman** | API testing and development | [postman.com](https://www.postman.com/) |
 
 
 
