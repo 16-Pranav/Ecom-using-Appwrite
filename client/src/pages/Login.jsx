@@ -14,6 +14,7 @@ const Login = () => {
   const {
     user,
     signInEmail,
+    signUpEmail,
     loading: authLoading,
     signInGoogle,
   } = useContext(AuthContext);
